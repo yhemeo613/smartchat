@@ -6,6 +6,11 @@ COPY package.json pnpm-lock.yaml ./
 RUN npm install -g pnpm && pnpm install
 
 COPY . .
+
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_APP_URL
+
 RUN pnpm build
 
 EXPOSE 8889
