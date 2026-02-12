@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# deploy.sh
+deploy.sh
+
 # debug
 npm-debug.log*
 yarn-debug.log*
