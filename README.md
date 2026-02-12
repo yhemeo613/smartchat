@@ -23,6 +23,32 @@
 
 SmartChat is a free, open-source AI chatbot platform. Upload your documents, train a chatbot in minutes, and embed it on any website with one line of code. It supports multiple LLM providers — OpenAI, Anthropic, DeepSeek, Qwen, Zhipu GLM, Moonshot, or any OpenAI-compatible API.
 
+### Screenshots
+
+<div align="center">
+
+| Homepage | Features |
+|:---:|:---:|
+| ![Homepage](docs/images/screenshot-01-homepage.png) | ![Features](docs/images/screenshot-02-features.png) |
+
+| Dashboard | Bot Settings |
+|:---:|:---:|
+| ![Dashboard](docs/images/screenshot-03-dashboard.png) | ![Bot Settings](docs/images/screenshot-04-bot-settings.png) |
+
+| Knowledge Base | Chat |
+|:---:|:---:|
+| ![Knowledge Base](docs/images/screenshot-05-knowledge-base.png) | ![Chat](docs/images/screenshot-06-chat.png) |
+
+| Embed Code | Settings |
+|:---:|:---:|
+| ![Embed](docs/images/screenshot-07-embed.png) | ![Settings](docs/images/screenshot-08-settings.png) |
+
+| Demo |
+|:---:|
+| ![Demo](docs/images/screenshot-09-demo.png) |
+
+</div>
+
 ### Features
 
 - **RAG-Powered Answers** — Upload PDF, TXT, DOCX, MD files. The retrieval-augmented generation engine finds the most relevant answers from your knowledge base.
@@ -77,14 +103,14 @@ src/
 #### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-username/smartchat.git
+git clone https://github.com/yhemeo613/smartchat.git
 cd smartchat
 npm install
 ```
 
 #### 2. Configure Environment
 
-Copy `.env.local.example` or create `.env.local`:
+Create `.env.local`:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -131,7 +157,7 @@ After creating a bot, copy the embed code from the **Embed** tab:
 
 Deploy to Vercel with one click:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/smartchat)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yhemeo613/smartchat)
 
 Or build and run manually:
 
@@ -140,9 +166,30 @@ npm run build
 npm start
 ```
 
+### Support the Project
+
+If you find SmartChat helpful, consider buying the author a coffee :)
+
+<div align="center">
+<table>
+<tr>
+<td align="center"><strong>WeChat Pay</strong></td>
+<td align="center"><strong>Alipay</strong></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/images/wechat.jpg" width="200" alt="WeChat Pay" /></td>
+<td align="center"><img src="docs/images/alipay.jpg" width="200" alt="Alipay" /></td>
+</tr>
+</table>
+</div>
+
 ### Contributing
 
 Contributions are welcome! Feel free to open issues and pull requests.
+
+### Author
+
+**豆豆** — [dzyperson@163.com](mailto:dzyperson@163.com)
 
 ### License
 
@@ -155,6 +202,32 @@ Contributions are welcome! Feel free to open issues and pull requests.
 ## SmartChat 是什么？
 
 SmartChat 是一个免费开源的 AI 聊天机器人平台。上传文档，几分钟内训练聊天机器人，一行代码嵌入任何网站。支持多家 LLM 服务商 —— OpenAI、Anthropic、DeepSeek、通义千问、智谱 GLM、月之暗面，或任何兼容 OpenAI API 的服务。
+
+### 界面预览
+
+<div align="center">
+
+| 首页 | 功能特性 |
+|:---:|:---:|
+| ![首页](docs/images/screenshot-01-homepage.png) | ![功能特性](docs/images/screenshot-02-features.png) |
+
+| 控制台 | 机器人设置 |
+|:---:|:---:|
+| ![控制台](docs/images/screenshot-03-dashboard.png) | ![机器人设置](docs/images/screenshot-04-bot-settings.png) |
+
+| 知识库 | 聊天 |
+|:---:|:---:|
+| ![知识库](docs/images/screenshot-05-knowledge-base.png) | ![聊天](docs/images/screenshot-06-chat.png) |
+
+| 嵌入代码 | 设置 |
+|:---:|:---:|
+| ![嵌入代码](docs/images/screenshot-07-embed.png) | ![设置](docs/images/screenshot-08-settings.png) |
+
+| 演示 |
+|:---:|
+| ![演示](docs/images/screenshot-09-demo.png) |
+
+</div>
 
 ### 功能特性
 
@@ -190,7 +263,7 @@ SmartChat 是一个免费开源的 AI 聊天机器人平台。上传文档，几
 #### 1. 克隆 & 安装
 
 ```bash
-git clone https://github.com/your-username/smartchat.git
+git clone https://github.com/yhemeo613/smartchat.git
 cd smartchat
 npm install
 ```
@@ -244,7 +317,7 @@ npm run dev
 
 一键部署到 Vercel：
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/smartchat)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yhemeo613/smartchat)
 
 或手动构建运行：
 
@@ -253,9 +326,30 @@ npm run build
 npm start
 ```
 
+### 打赏支持
+
+SmartChat 完全免费开源。如果觉得有帮助，可以请作者喝杯咖啡 :)
+
+<div align="center">
+<table>
+<tr>
+<td align="center"><strong>微信支付</strong></td>
+<td align="center"><strong>支付宝</strong></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/images/wechat.jpg" width="200" alt="微信支付" /></td>
+<td align="center"><img src="docs/images/alipay.jpg" width="200" alt="支付宝" /></td>
+</tr>
+</table>
+</div>
+
 ### 贡献
 
 欢迎贡献！请随时提交 Issue 和 Pull Request。
+
+### 作者
+
+**豆豆** — [dzyperson@163.com](mailto:dzyperson@163.com)
 
 ### 开源协议
 
