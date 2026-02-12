@@ -18,6 +18,11 @@ export async function retrieveContext(
 
   const embedding = await generateEmbedding(query);
 
+  // If embedding is empty (e.g. local model unavailable on Vercel), skip vector search
+  if (!embedding || embedding.length === 0) {
+    return [];
+  }
+
   const { data, error } = await supabase.rpc('match_documents', {
     query_embedding: embedding,
     match_bot_id: botId,

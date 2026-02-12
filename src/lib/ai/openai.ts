@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 
 export const EMBEDDING_MODELS = [
+  { value: 'text-embedding-v3', label: '通义千问 text-embedding-v3 (免费额度)', group: 'Remote' },
   { value: 'local-bge-small-zh-v1.5', label: 'Local: BGE-small-zh (Free, 中文优化)', group: 'Local (Free)' },
   { value: 'local-all-MiniLM-L6-v2', label: 'Local: all-MiniLM-L6-v2 (Free)', group: 'Local (Free)' },
 ] as const;
@@ -37,20 +38,30 @@ async function generateLocalEmbedding(text: string, model: EmbeddingModel): Prom
 
 export async function generateEmbedding(
   text: string,
-  model: EmbeddingModel = 'local-all-MiniLM-L6-v2',
+  model: EmbeddingModel = 'text-embedding-v3',
   openaiConfig?: { apiKey: string; baseUrl?: string }
 ): Promise<number[]> {
   if (model.startsWith('local-')) {
-    return generateLocalEmbedding(text, model);
+    try {
+      return await generateLocalEmbedding(text, model);
+    } catch {
+      console.warn('Local embedding model unavailable (e.g. on Vercel), skipping.');
+      return [];
+    }
   }
 
-  if (!openaiConfig?.apiKey) {
-    throw new Error('OpenAI API Key is required for non-local embedding models.');
+  // Use provided config or fall back to DASHSCOPE env vars for Qwen embedding
+  const apiKey = openaiConfig?.apiKey || process.env.DASHSCOPE_API_KEY;
+  const baseUrl = openaiConfig?.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+
+  if (!apiKey) {
+    console.warn('No embedding API key configured, skipping.');
+    return [];
   }
 
   const client = new OpenAI({
-    apiKey: openaiConfig.apiKey,
-    baseURL: openaiConfig.baseUrl || undefined,
+    apiKey,
+    baseURL: baseUrl,
   });
 
   try {
