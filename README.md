@@ -4,6 +4,9 @@
 
 **Turn your knowledge base into an intelligent AI customer support agent.**
 
+## online
+[SmartChat](http://smartchat.nofx.asia/)
+
 **将你的知识库变成智能 AI 客服。**
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
