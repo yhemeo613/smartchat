@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateEmbedding, splitTextIntoChunks, EMBEDDING_MODELS, type EmbeddingModel } from '@/lib/ai/openai';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 const SUPPORTED_TYPES: Record<string, string> = {
   'application/pdf': 'pdf',
   'text/plain': 'txt',

@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,14 @@ interface BotCardProps {
 
 export function BotCard({ bot, onDelete, onCopyEmbed }: BotCardProps) {
   const { t } = useI18n();
+  const router = useRouter();
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // 避免点击下拉菜单、按钮等交互元素时触发跳转
+    const target = e.target as HTMLElement;
+    if (target.closest('button, a, [role="menuitem"]')) return;
+    router.push(`/dashboard/bots/${bot.id}`);
+  };
 
   return (
     <motion.div
@@ -39,7 +47,10 @@ export function BotCard({ bot, onDelete, onCopyEmbed }: BotCardProps) {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="group hover:shadow-md transition-all duration-200 py-0 overflow-hidden">
+      <Card
+        className="group hover:shadow-md transition-all duration-200 py-0 overflow-hidden cursor-pointer"
+        onClick={handleCardClick}
+      >
         <div
           className="h-1.5 w-full"
           style={{ backgroundColor: bot.theme_color || '#6366f1' }}
@@ -47,12 +58,9 @@ export function BotCard({ bot, onDelete, onCopyEmbed }: BotCardProps) {
         <CardContent className="pt-4 pb-3 px-5">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <Link
-                href={`/dashboard/bots/${bot.id}`}
-                className="text-sm font-semibold hover:underline underline-offset-2 truncate block"
-              >
+              <span className="text-sm font-semibold truncate block">
                 {bot.name}
-              </Link>
+              </span>
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                 {bot.description}
               </p>
@@ -68,11 +76,9 @@ export function BotCard({ bot, onDelete, onCopyEmbed }: BotCardProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href={`/dashboard/bots/${bot.id}`}>
-                    <Pencil className="size-3.5" />
-                    {t.dashboard.edit}
-                  </Link>
+                <DropdownMenuItem onClick={() => router.push(`/dashboard/bots/${bot.id}`)}>
+                  <Pencil className="size-3.5" />
+                  {t.dashboard.edit}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onCopyEmbed?.(bot.id)}>
                   <Code2 className="size-3.5" />
@@ -112,12 +118,6 @@ export function BotCard({ bot, onDelete, onCopyEmbed }: BotCardProps) {
           <p className="text-[10px] text-muted-foreground">
             {bot.model} &middot; {new Date(bot.updated_at).toLocaleDateString()}
           </p>
-          <Link href="/demo">
-            <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2 gap-1 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
-              <Eye className="size-3" />
-              {t.demo.viewDemo}
-            </Button>
-          </Link>
         </CardFooter>
       </Card>
     </motion.div>

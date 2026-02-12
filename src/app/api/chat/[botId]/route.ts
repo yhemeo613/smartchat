@@ -62,10 +62,10 @@ export async function POST(
       }
     }
 
-    // Get or create conversation
+    // Get or create conversation (use service client to bypass RLS for anonymous visitors)
     let convId = conversationId;
     if (!convId) {
-      const { data: conv, error: convError } = await supabase
+      const { data: conv, error: convError } = await serviceClient
         .from('conversations')
         .insert({
           bot_id: botId,
@@ -83,7 +83,7 @@ export async function POST(
     }
 
     // Save user message
-    await supabase.from('messages').insert({
+    await serviceClient.from('messages').insert({
       conversation_id: convId,
       role: 'user',
       content: message,
@@ -96,7 +96,7 @@ export async function POST(
     const systemPrompt = buildContextPrompt(bot.system_prompt, contexts);
 
     // Fetch recent conversation history
-    const { data: history } = await supabase
+    const { data: history } = await serviceClient
       .from('messages')
       .select('role, content')
       .eq('conversation_id', convId)
@@ -161,7 +161,7 @@ export async function POST(
 
           controller.close();
 
-          await supabase.from('messages').insert({
+          await serviceClient.from('messages').insert({
             conversation_id: convId,
             role: 'assistant',
             content: fullResponse,

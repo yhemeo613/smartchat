@@ -277,10 +277,14 @@ create policy "Users can view conversations of their bots"
     bot_id in (select id from public.bots where user_id = auth.uid())
   );
 
-create policy "Anyone can create conversations on public bots"
+create policy "Anyone can create conversations on public bots or own bots"
   on public.conversations for insert
   with check (
-    bot_id in (select id from public.bots where is_public = true)
+    bot_id in (
+      select id from public.bots
+      where is_public = true
+         or user_id = auth.uid()
+    )
   );
 
 create policy "Users can delete conversations of their bots"
