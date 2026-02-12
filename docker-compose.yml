@@ -1,0 +1,10 @@
+services:
+  smartchat:
+    build: .
+    container_name: smartchat
+    ports:
+      - "8889:8889"
+    environment:
+      - NODE_ENV=production
+      - PORT=8889
+    restart: always
