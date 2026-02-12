@@ -5,29 +5,16 @@ import { generateEmbedding, splitTextIntoChunks, EMBEDDING_MODELS, type Embeddin
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const SUPPORTED_TYPES: Record<string, string> = {
-  'application/pdf': 'pdf',
-  'text/plain': 'txt',
-  'text/markdown': 'md',
-  'application/msword': 'doc',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-};
+const SUPPORTED_EXTS = ['pdf', 'txt', 'md', 'doc', 'docx'];
 
-async function extractText(file: File): Promise<string> {
-  const type = file.type || '';
-  const ext = file.name.split('.').pop()?.toLowerCase();
-
-  if (type === 'application/pdf' || ext === 'pdf') {
-    const buffer = Buffer.from(await file.arrayBuffer());
+async function extractText(buffer: Buffer, ext: string): Promise<string> {
+  if (ext === 'pdf') {
     const pdfParse = (await import('pdf-parse')).default;
     const result = await pdfParse(buffer);
     return result.text;
   }
 
   if (ext === 'doc' || ext === 'docx') {
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    // Try mammoth first (for .docx)
     if (ext === 'docx') {
       try {
         const mammoth = await import('mammoth');
@@ -38,7 +25,6 @@ async function extractText(file: File): Promise<string> {
       }
     }
 
-    // Use word-extractor for .doc or as fallback for .docx
     try {
       const WordExtractor = (await import('word-extractor')).default;
       const extractor = new WordExtractor();
@@ -46,16 +32,15 @@ async function extractText(file: File): Promise<string> {
       return doc.getBody();
     } catch (e) {
       console.error('DOC/DOCX parse error:', e);
-      throw new Error('Failed to parse Word file. Please make sure it is a valid .doc or .docx file.');
+      throw new Error('Failed to parse Word file.');
     }
   }
 
-  return await file.text();
+  return buffer.toString('utf-8');
 }
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify authentication
     const supabase = await createClient();
     const {
       data: { user },
@@ -65,26 +50,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const formData = await req.formData();
-    const file = formData.get('file') as File | null;
-    const botId = formData.get('botId') as string | null;
-    const embeddingModel = (formData.get('embeddingModel') as EmbeddingModel | null) || 'local-all-MiniLM-L6-v2';
+    const { filePath, fileName, botId, embeddingModel: reqModel } = await req.json();
 
-    // Validate embedding model
+    if (!filePath || !fileName || !botId) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const embeddingModel: EmbeddingModel = reqModel || 'text-embedding-v3';
     const validModels = EMBEDDING_MODELS.map((m) => m.value);
     if (!validModels.includes(embeddingModel)) {
       return NextResponse.json({ error: 'Invalid embedding model' }, { status: 400 });
     }
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-    }
-
-    if (file.size > 20 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File too large. Maximum size is 20MB.' }, { status: 400 });
-    }
-    if (!botId) {
-      return NextResponse.json({ error: 'No botId provided' }, { status: 400 });
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    if (!SUPPORTED_EXTS.includes(ext)) {
+      return NextResponse.json(
+        { error: 'Unsupported file type. Supported: PDF, TXT, MD, DOC, DOCX' },
+        { status: 400 }
+      );
     }
 
     // Verify bot ownership
@@ -99,17 +82,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Bot not found' }, { status: 404 });
     }
 
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    const isSupported =
-      SUPPORTED_TYPES[file.type] || ['pdf', 'txt', 'md', 'doc', 'docx'].includes(ext || '');
-    if (!isSupported) {
-      return NextResponse.json(
-        { error: 'Unsupported file type. Supported: PDF, TXT, MD, DOC, DOCX' },
-        { status: 400 }
-      );
+    // Download file from Supabase Storage
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('documents')
+      .download(filePath);
+
+    if (downloadError || !fileData) {
+      return NextResponse.json({ error: 'Failed to download file from storage' }, { status: 500 });
     }
 
-    const text = await extractText(file);
+    const buffer = Buffer.from(await fileData.arrayBuffer());
+    const text = await extractText(buffer, ext);
+
     if (!text.trim()) {
       return NextResponse.json({ error: 'File contains no text content' }, { status: 400 });
     }
@@ -118,7 +102,7 @@ export async function POST(req: NextRequest) {
       .from('documents')
       .insert({
         bot_id: botId,
-        name: file.name,
+        name: fileName,
         content: text,
         status: 'processing',
       })
@@ -132,7 +116,6 @@ export async function POST(req: NextRequest) {
 
     try {
       const chunks = await splitTextIntoChunks(text);
-      const chunkRecords = [];
       let totalTokens = 0;
 
       // Fetch user's AI config for non-local embedding models
@@ -146,30 +129,32 @@ export async function POST(req: NextRequest) {
         ? { apiKey: profile.openai_api_key, baseUrl: profile.openai_base_url || undefined }
         : undefined;
 
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        const embedding = await generateEmbedding(chunk, embeddingModel, openaiConfig);
-        totalTokens += Math.ceil(chunk.length / 4);
-
-        chunkRecords.push({
-          document_id: doc.id,
-          bot_id: botId,
-          content: chunk,
-          embedding: embedding,
-          metadata: {
-            chunk_index: i,
-            document_name: file.name,
-          },
-        });
-      }
-
-      // Insert chunks in batches to avoid payload size limits
+      // Process and insert chunks in batches
       const BATCH_SIZE = 10;
-      for (let b = 0; b < chunkRecords.length; b += BATCH_SIZE) {
-        const batch = chunkRecords.slice(b, b + BATCH_SIZE);
+      for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+        const batch = chunks.slice(i, i + BATCH_SIZE);
+        const chunkRecords = [];
+
+        for (let j = 0; j < batch.length; j++) {
+          const chunk = batch[j];
+          const embedding = await generateEmbedding(chunk, embeddingModel, openaiConfig);
+          totalTokens += Math.ceil(chunk.length / 4);
+
+          chunkRecords.push({
+            document_id: doc.id,
+            bot_id: botId,
+            content: chunk,
+            embedding,
+            metadata: {
+              chunk_index: i + j,
+              document_name: fileName,
+            },
+          });
+        }
+
         const { error: chunkError } = await supabase
           .from('document_chunks')
-          .insert(batch);
+          .insert(chunkRecords);
 
         if (chunkError) {
           throw new Error(`Chunk insert error: ${chunkError.message}`);
@@ -188,7 +173,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         id: doc.id,
         bot_id: botId,
-        name: file.name,
+        name: fileName,
         token_count: totalTokens,
         chunk_count: chunks.length,
         status: 'ready',

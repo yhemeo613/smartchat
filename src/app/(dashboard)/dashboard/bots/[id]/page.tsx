@@ -211,6 +211,8 @@ export default function BotDetailPage() {
   };
 
   const handleUpload = async (files: File[]) => {
+    const supabase = createClient();
+
     for (const file of files) {
       // Add placeholder
       const tempId = `temp-${Date.now()}-${file.name}`;
@@ -227,12 +229,27 @@ export default function BotDetailPage() {
         ...prev,
       ]);
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('botId', botId);
-
       try {
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        // Upload file to Supabase Storage first
+        const filePath = `${botId}/${Date.now()}-${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw new Error(uploadError.message);
+        }
+
+        // Then call API with file path instead of file body
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filePath,
+            fileName: file.name,
+            botId,
+          }),
+        });
         const result = await res.json();
 
         if (res.ok) {
