@@ -68,7 +68,7 @@ export async function generateEmbedding(
     const response = await client.embeddings.create({
       model,
       input: text,
-      dimensions: 384,
+      dimensions: 512,
     });
     return response.data[0].embedding;
   } catch (error) {
