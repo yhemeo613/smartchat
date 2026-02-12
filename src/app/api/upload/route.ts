@@ -163,12 +163,17 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      const { error: chunkError } = await supabase
-        .from('document_chunks')
-        .insert(chunkRecords);
+      // Insert chunks in batches to avoid payload size limits
+      const BATCH_SIZE = 10;
+      for (let b = 0; b < chunkRecords.length; b += BATCH_SIZE) {
+        const batch = chunkRecords.slice(b, b + BATCH_SIZE);
+        const { error: chunkError } = await supabase
+          .from('document_chunks')
+          .insert(batch);
 
-      if (chunkError) {
-        throw new Error(`Chunk insert error: ${chunkError.message}`);
+        if (chunkError) {
+          throw new Error(`Chunk insert error: ${chunkError.message}`);
+        }
       }
 
       const { error: updateError } = await supabase
