@@ -8,7 +8,6 @@ import {
   MessageSquare,
   Code2,
   Palette,
-  CreditCard,
   Menu,
 } from 'lucide-react'
 import {
@@ -33,7 +32,6 @@ export function DocsSidebar() {
     { id: 'chat-widget', label: t.docs.sidebar.chatWidget, icon: MessageSquare },
     { id: 'api-reference', label: t.docs.sidebar.apiReference, icon: Code2 },
     { id: 'customization', label: t.docs.sidebar.customization, icon: Palette },
-    { id: 'pricing-plans', label: t.docs.sidebar.pricingPlans, icon: CreditCard },
   ]
 
   useEffect(() => {

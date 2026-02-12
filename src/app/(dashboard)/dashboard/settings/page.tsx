@@ -18,15 +18,22 @@ import {
 } from '@/components/ui/select';
 import {
   User,
-  Key,
-  CreditCard,
   Globe,
-  Plus,
-  Trash2,
-  Zap,
   Loader2,
+  Bot,
+  Check,
+  X,
 } from 'lucide-react';
 import type { Locale } from '@/types';
+import { PROVIDER_PRESETS, getPresetById } from '@/lib/ai/providers';
+
+interface AISettings {
+  ai_provider: string;
+  ai_api_key: string;
+  ai_base_url: string;
+  default_model: string;
+  has_api_key: boolean;
+}
 
 export default function SettingsPage() {
   const { t, locale, setLocale } = useI18n();
@@ -36,11 +43,21 @@ export default function SettingsPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [saving, setSaving] = useState(false);
-  const [apiKeys, setApiKeys] = useState<
-    { id: string; name: string; prefix: string; lastUsed: string | null; created: string }[]
-  >([]);
-  const [showKeyForm, setShowKeyForm] = useState(false);
-  const [newKeyName, setNewKeyName] = useState('');
+
+  // AI config state
+  const [aiSettings, setAiSettings] = useState<AISettings>({
+    ai_provider: 'openai',
+    ai_api_key: '',
+    ai_base_url: '',
+    default_model: 'gpt-4o-mini',
+    has_api_key: false,
+  });
+  const [aiSaving, setAiSaving] = useState(false);
+  const [aiMessage, setAiMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [customModel, setCustomModel] = useState('');
+
+  const currentPreset = getPresetById(aiSettings.ai_provider);
+  const models = currentPreset?.models ?? [];
 
   // Load real user data
   useEffect(() => {
@@ -51,6 +68,35 @@ export default function SettingsPage() {
       setEmail(user.email || '');
     }
   }, [user, profile]);
+
+  // Load AI settings
+  useEffect(() => {
+    async function loadAiSettings() {
+      try {
+        const res = await fetch('/api/user/ai-settings');
+        if (res.ok) {
+          const data = await res.json();
+          setAiSettings(data);
+        }
+      } catch {
+        // ignore load errors
+      }
+    }
+    if (user) {
+      loadAiSettings();
+    }
+  }, [user]);
+
+  const handleProviderChange = (providerId: string) => {
+    const preset = getPresetById(providerId);
+    setAiSettings((prev) => ({
+      ...prev,
+      ai_provider: providerId,
+      ai_base_url: preset?.baseUrl || '',
+      default_model: preset?.models[0]?.value || prev.default_model,
+    }));
+    setCustomModel('');
+  };
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -66,22 +112,39 @@ export default function SettingsPage() {
     setSaving(false);
   };
 
-  const handleRevokeKey = (id: string) => {
-    setApiKeys((prev) => prev.filter((k) => k.id !== id));
-  };
+  const handleSaveAiConfig = async () => {
+    setAiSaving(true);
+    setAiMessage(null);
+    try {
+      const modelToSave = aiSettings.ai_provider === 'custom' && customModel
+        ? customModel
+        : aiSettings.default_model;
 
-  const handleCreateKey = () => {
-    if (!newKeyName.trim()) return;
-    const newKey = {
-      id: `key-${Date.now()}`,
-      name: newKeyName,
-      prefix: `sk-new-****${Math.random().toString(36).slice(-4)}`,
-      lastUsed: null,
-      created: new Date().toISOString(),
-    };
-    setApiKeys((prev) => [...prev, newKey]);
-    setNewKeyName('');
-    setShowKeyForm(false);
+      const res = await fetch('/api/user/ai-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ai_provider: aiSettings.ai_provider,
+          ai_api_key: aiSettings.ai_api_key,
+          ai_base_url: aiSettings.ai_base_url,
+          default_model: modelToSave,
+        }),
+      });
+      if (res.ok) {
+        setAiMessage({ type: 'success', text: s.aiConfigSaved });
+        // Reload to get masked keys
+        const reloadRes = await fetch('/api/user/ai-settings');
+        if (reloadRes.ok) {
+          setAiSettings(await reloadRes.json());
+        }
+      } else {
+        setAiMessage({ type: 'error', text: s.aiConfigError });
+      }
+    } catch {
+      setAiMessage({ type: 'error', text: s.aiConfigError });
+    }
+    setAiSaving(false);
+    setTimeout(() => setAiMessage(null), 3000);
   };
 
   return (
@@ -127,121 +190,111 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* API Keys Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Key className="size-4 text-muted-foreground" />
-              <CardTitle className="text-sm">{s.apiKeys}</CardTitle>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowKeyForm(!showKeyForm)}
-            >
-              <Plus className="size-3.5" />
-              {s.createKey}
-            </Button>
-          </div>
-          <CardDescription>{s.apiKeysDescription}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {showKeyForm && (
-            <div className="flex items-end gap-2 rounded-lg border p-3 bg-muted/30">
-              <div className="flex-1 grid gap-1.5">
-                <Label htmlFor="new-key-name" className="text-xs">
-                  {s.keyName}
-                </Label>
-                <Input
-                  id="new-key-name"
-                  placeholder="e.g. Production"
-                  value={newKeyName}
-                  onChange={(e) => setNewKeyName(e.target.value)}
-                  className="h-8"
-                />
-              </div>
-              <Button size="sm" onClick={handleCreateKey}>
-                {s.createKey}
-              </Button>
-            </div>
-          )}
-
-          {apiKeys.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              No API keys yet.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {apiKeys.map((key) => (
-                <div
-                  key={key.id}
-                  className="flex items-center gap-3 rounded-lg border px-4 py-3"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">{key.name}</p>
-                      <code className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
-                        {key.prefix}
-                      </code>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      <span>
-                        {s.lastUsed}:{' '}
-                        {key.lastUsed
-                          ? new Date(key.lastUsed).toLocaleDateString()
-                          : s.never}
-                      </span>
-                      <span>
-                        {s.created}:{' '}
-                        {new Date(key.created).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive shrink-0"
-                    onClick={() => handleRevokeKey(key.id)}
-                  >
-                    <Trash2 className="size-3.5" />
-                    {s.revoke}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Billing Section */}
+      {/* AI Model Configuration Section */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <CreditCard className="size-4 text-muted-foreground" />
-            <CardTitle className="text-sm">{s.billing}</CardTitle>
+            <Bot className="size-4 text-muted-foreground" />
+            <CardTitle className="text-sm">{s.aiConfig}</CardTitle>
           </div>
-          <CardDescription>{s.billingDescription}</CardDescription>
+          <CardDescription>{s.aiConfigDescription}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-indigo-50">
-                <Zap className="size-5 text-indigo-600" />
+        <CardContent className="space-y-5">
+          {/* Provider + Status */}
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">{s.provider}</Label>
+              <Badge variant={aiSettings.has_api_key ? 'default' : 'secondary'} className="text-[10px]">
+                {aiSettings.has_api_key ? s.configured : s.notConfigured}
+              </Badge>
+            </div>
+            <Select
+              value={aiSettings.ai_provider}
+              onValueChange={handleProviderChange}
+            >
+              <SelectTrigger className="w-full h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PROVIDER_PRESETS.map((p) => (
+                  <SelectItem key={p.id} value={p.id} className="text-xs">
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="ai-key" className="text-xs">{s.apiKey}</Label>
+                <Input
+                  id="ai-key"
+                  type="password"
+                  placeholder={s.apiKeyPlaceholder}
+                  value={aiSettings.ai_api_key}
+                  onChange={(e) => setAiSettings((prev) => ({ ...prev, ai_api_key: e.target.value }))}
+                  className="h-8 font-mono text-xs"
+                />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold">Free</p>
-                  <Badge variant="secondary" className="text-[10px]">
-                    {s.currentPlan}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">$0/month</p>
+              <div className="grid gap-1.5">
+                <Label htmlFor="ai-url" className="text-xs">{s.baseUrl}</Label>
+                <Input
+                  id="ai-url"
+                  placeholder={s.baseUrlPlaceholder}
+                  value={aiSettings.ai_base_url}
+                  onChange={(e) => setAiSettings((prev) => ({ ...prev, ai_base_url: e.target.value }))}
+                  className="h-8 text-xs"
+                />
               </div>
             </div>
-            <Button variant="outline" size="sm">
-              {s.upgradePlan}
-            </Button>
+          </div>
+
+          {/* Default Model */}
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{s.defaultModel}</Label>
+            {aiSettings.ai_provider === 'custom' ? (
+              <Input
+                placeholder={s.customModelPlaceholder}
+                value={customModel || aiSettings.default_model}
+                onChange={(e) => {
+                  setCustomModel(e.target.value);
+                  setAiSettings((prev) => ({ ...prev, default_model: e.target.value }));
+                }}
+                className="w-64 h-8 text-xs"
+              />
+            ) : (
+              <Select
+                value={aiSettings.default_model}
+                onValueChange={(val) => setAiSettings((prev) => ({ ...prev, default_model: val }))}
+              >
+                <SelectTrigger className="w-64 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {models.map((m) => (
+                    <SelectItem key={m.value} value={m.value} className="text-xs">
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          {/* Save + Message */}
+          <div className="flex items-center justify-between">
+            {aiMessage && (
+              <div className={`flex items-center gap-1.5 text-xs ${aiMessage.type === 'success' ? 'text-green-600' : 'text-destructive'}`}>
+                {aiMessage.type === 'success' ? <Check className="size-3.5" /> : <X className="size-3.5" />}
+                {aiMessage.text}
+              </div>
+            )}
+            <div className="ml-auto">
+              <Button size="sm" onClick={handleSaveAiConfig} disabled={aiSaving}>
+                {aiSaving && <Loader2 className="size-3.5 animate-spin" />}
+                {s.saveAiConfig}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

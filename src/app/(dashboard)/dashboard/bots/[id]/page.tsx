@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import type { Bot, Document as DocType, Conversation } from '@/types';
+import { PROVIDER_PRESETS, getPresetById } from '@/lib/ai/providers';
 
 const THEME_COLORS = [
   '#6366f1',
@@ -48,13 +49,7 @@ const THEME_COLORS = [
   '#14b8a6',
 ];
 
-const MODELS = [
-  { value: 'gpt-4o', label: 'GPT-4o' },
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
-  { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-  { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
-];
+// Models will be loaded from user's AI settings
 
 function timeAgo(dateStr: string): string {
   const now = new Date();
@@ -90,6 +85,7 @@ export default function BotDetailPage() {
   const [documents, setDocuments] = useState<DocType[]>([]);
   const [conversations, setConversations] = useState<(Conversation & { messageCount: number })[]>([]);
   const [stats, setStats] = useState({ totalConversations: 0, totalMessages: 0, avgMessages: 0 });
+  const [models, setModels] = useState<{ value: string; label: string }[]>(PROVIDER_PRESETS[0].models.map(m => ({ ...m })));
 
   const fetchBot = useCallback(async () => {
     const supabase = createClient();
@@ -160,6 +156,18 @@ export default function BotDetailPage() {
     fetchDocuments();
     fetchConversations();
   }, [fetchBot, fetchDocuments, fetchConversations]);
+
+  useEffect(() => {
+    fetch('/api/user/ai-settings')
+      .then((res) => res.json())
+      .then((data) => {
+        const preset = getPresetById(data.ai_provider);
+        if (preset?.models.length) {
+          setModels(preset.models.map(m => ({ ...m })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -396,7 +404,7 @@ export default function BotDetailPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {MODELS.map((m) => (
+                      {models.map((m) => (
                         <SelectItem key={m.value} value={m.value}>
                           {m.label}
                         </SelectItem>

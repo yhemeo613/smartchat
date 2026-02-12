@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { streamChat } from '@/lib/ai/provider';
+import { createServiceClient } from '@/lib/supabase/service';
+import { streamChat, type AIConfig } from '@/lib/ai/provider';
 import { retrieveContext, buildContextPrompt } from '@/lib/ai/rag';
 
 export async function POST(req: NextRequest) {
@@ -25,6 +26,27 @@ export async function POST(req: NextRequest) {
 
     if (botError || !bot) {
       return NextResponse.json({ error: 'Bot not found' }, { status: 404 });
+    }
+
+    // Fetch bot owner's AI configuration (using service client to bypass RLS)
+    const serviceClient = createServiceClient();
+    const { data: ownerProfile } = await serviceClient
+      .from('profiles')
+      .select('ai_provider, ai_api_key, ai_base_url')
+      .eq('id', bot.user_id)
+      .single();
+
+    const aiConfig: AIConfig = {
+      provider: ownerProfile?.ai_provider || 'openai',
+      apiKey: ownerProfile?.ai_api_key || '',
+      baseUrl: ownerProfile?.ai_base_url || undefined,
+    };
+
+    if (!aiConfig.apiKey) {
+      return NextResponse.json(
+        { error: 'API Key is not configured. The bot owner needs to set it in Settings.' },
+        { status: 422 }
+      );
     }
 
     // If bot is not public, verify the current user is the owner (preview mode)
@@ -106,6 +128,7 @@ export async function POST(req: NextRequest) {
       temperature: bot.temperature ?? 0.7,
       max_tokens: bot.max_tokens || 1000,
       messages,
+      aiConfig,
     });
 
     const encoder = new TextEncoder();

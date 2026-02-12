@@ -7,7 +7,6 @@ import { useI18n } from '@/lib/i18n';
 import { MessageBubble } from '@/components/chat/message-bubble';
 import { ChatInput } from '@/components/chat/chat-input';
 import { TypingIndicator } from '@/components/chat/typing-indicator';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   ShoppingCart,
@@ -16,15 +15,12 @@ import {
   Tag,
   MessageSquare,
   ArrowLeft,
-  Lock,
   Sparkles,
   Lightbulb,
   Info,
 } from 'lucide-react';
 
 const DEMO_THEME_COLOR = '#6366f1';
-const GUEST_QUOTA = 3;
-const STORAGE_KEY = 'smartchat-demo-count';
 
 // Simulated e-commerce agent responses
 const DEMO_RESPONSES: Record<string, Record<string, string>> = {
@@ -80,52 +76,11 @@ interface ChatMessage {
   content: string;
 }
 
-// Guest fallback using localStorage
-function getGuestCount(): number {
-  if (typeof window === 'undefined') return 0;
-  return parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
-}
-
-function incrementGuestCount(): number {
-  const count = getGuestCount() + 1;
-  localStorage.setItem(STORAGE_KEY, String(count));
-  return count;
-}
-
 export default function DemoPage() {
   const { t } = useI18n();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [quota, setQuota] = useState(GUEST_QUOTA);
-  const [used, setUsed] = useState(0);
-  const [limitReached, setLimitReached] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetch('/api/demo')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.loggedIn) {
-          setLoggedIn(true);
-          setQuota(data.quota);
-          setUsed(data.used);
-          if (data.used >= data.quota) setLimitReached(true);
-        } else {
-          // Guest: use localStorage
-          const count = getGuestCount();
-          setUsed(count);
-          setQuota(GUEST_QUOTA);
-          if (count >= GUEST_QUOTA) setLimitReached(true);
-        }
-      })
-      .catch(() => {
-        // Fallback to guest mode
-        const count = getGuestCount();
-        setUsed(count);
-        if (count >= GUEST_QUOTA) setLimitReached(true);
-      });
-  }, []);
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -141,8 +96,6 @@ export default function DemoPage() {
   }, [messages, isTyping, scrollToBottom]);
 
   const handleSend = async (content: string) => {
-    if (limitReached) return;
-
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -150,27 +103,6 @@ export default function DemoPage() {
     };
     setMessages((prev) => [...prev, userMsg]);
     setIsTyping(true);
-
-    // Update quota
-    let newUsed = used + 1;
-    if (loggedIn) {
-      try {
-        const res = await fetch('/api/demo', { method: 'POST' });
-        if (res.ok) {
-          const data = await res.json();
-          newUsed = data.used;
-        } else if (res.status === 403) {
-          setLimitReached(true);
-          setIsTyping(false);
-          return;
-        }
-      } catch {
-        // Fallback: still allow the message
-      }
-    } else {
-      newUsed = incrementGuestCount();
-    }
-    setUsed(newUsed);
 
     // Simulate AI response delay
     await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 1200));
@@ -184,13 +116,8 @@ export default function DemoPage() {
 
     setIsTyping(false);
     setMessages((prev) => [...prev, assistantMsg]);
-
-    if (newUsed >= quota) {
-      setLimitReached(true);
-    }
   };
 
-  const remaining = quota - used;
   const scenarioIcons = [ShoppingCart, Package, RotateCcw, Tag];
 
   return (
@@ -209,18 +136,6 @@ export default function DemoPage() {
             <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100 text-[10px]">
               {t.demo.badge}
             </Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            {!limitReached && (
-              <span className="text-xs text-muted-foreground">
-                {remaining} {t.demo.remainingChats}
-              </span>
-            )}
-            <Link href="/signup">
-              <Button size="sm" variant="outline" className="text-xs">
-                {t.demo.signUp}
-              </Button>
-            </Link>
           </div>
         </div>
       </header>
@@ -290,7 +205,7 @@ export default function DemoPage() {
                     key={i}
                     className="text-xs text-muted-foreground bg-amber-50/50 rounded-lg px-3 py-2 cursor-pointer hover:bg-amber-50 transition-colors"
                     onClick={() => {
-                      if (!limitReached && !isTyping) {
+                      if (!isTyping) {
                         const clean = item.replace(/["""]/g, '');
                         handleSend(clean);
                       }
@@ -323,11 +238,6 @@ export default function DemoPage() {
                   <h3 className="text-sm font-semibold leading-tight">{t.demo.botName}</h3>
                   <p className="text-xs opacity-80">Online</p>
                 </div>
-                {!limitReached && (
-                  <Badge className="bg-white/20 text-white hover:bg-white/20 text-[10px]">
-                    {remaining}/{quota}
-                  </Badge>
-                )}
               </div>
 
               {/* Messages */}
@@ -350,44 +260,12 @@ export default function DemoPage() {
                 {isTyping && <TypingIndicator />}
               </div>
 
-              {/* Limit Reached Overlay or Input */}
-              <AnimatePresence>
-                {limitReached ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="border-t p-5 bg-slate-50 text-center"
-                  >
-                    <div className="flex justify-center mb-2">
-                      <div className="size-10 rounded-full bg-orange-100 flex items-center justify-center">
-                        <Lock className="size-4 text-orange-600" />
-                      </div>
-                    </div>
-                    <p className="text-sm font-semibold">{t.demo.limitReached}</p>
-                    <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                      {t.demo.limitDescription}
-                    </p>
-                    <div className="flex items-center justify-center gap-2 mt-3">
-                      <Link href="/signup">
-                        <Button size="sm" className="text-xs">
-                          {t.demo.signUp}
-                        </Button>
-                      </Link>
-                      <Link href="/dashboard/bots">
-                        <Button size="sm" variant="outline" className="text-xs">
-                          {t.demo.backToDashboard}
-                        </Button>
-                      </Link>
-                    </div>
-                  </motion.div>
-                ) : (
-                  <ChatInput
-                    onSend={handleSend}
-                    disabled={isTyping}
-                    placeholder={t.chat.placeholder}
-                  />
-                )}
-              </AnimatePresence>
+              {/* Input */}
+              <ChatInput
+                onSend={handleSend}
+                disabled={isTyping}
+                placeholder={t.chat.placeholder}
+              />
             </div>
           </motion.div>
         </div>

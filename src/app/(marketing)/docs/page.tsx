@@ -10,12 +10,9 @@ import {
   FileEdit,
   ArrowRight,
   Check,
-  X,
   Minus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import { DocsSidebar } from '@/components/marketing/docs/docs-sidebar';
 import { DocsSection } from '@/components/marketing/docs/docs-section';
 import { DocsCodeBlock } from '@/components/marketing/docs/docs-code-block';
@@ -72,19 +69,6 @@ export default function DocsPage() {
     { title: t.docs.knowledgeBase.ragStep4, desc: t.docs.knowledgeBase.ragStep4Desc },
   ];
 
-  const pricingFeatures = [
-    { key: 'bots', label: t.docs.pricingPlans.bots, free: '1', pro: '5', enterprise: t.docs.pricingPlans.unlimited },
-    { key: 'messages', label: t.docs.pricingPlans.messages, free: '50', pro: '5,000', enterprise: t.docs.pricingPlans.unlimited },
-    { key: 'documents', label: t.docs.pricingPlans.documents, free: '1', pro: '50', enterprise: t.docs.pricingPlans.unlimited },
-    { key: 'customization', label: t.docs.pricingPlans.customization, free: t.docs.pricingPlans.basic, pro: t.docs.pricingPlans.full, enterprise: t.docs.pricingPlans.full },
-    { key: 'analytics', label: t.docs.pricingPlans.analytics, free: false, pro: true, enterprise: true },
-    { key: 'support', label: t.docs.pricingPlans.support, free: t.docs.pricingPlans.community, pro: t.docs.pricingPlans.priority, enterprise: t.docs.pricingPlans.dedicated },
-    { key: 'branding', label: t.docs.pricingPlans.branding, free: false, pro: true, enterprise: true },
-    { key: 'api', label: t.docs.pricingPlans.api, free: false, pro: false, enterprise: true },
-    { key: 'sso', label: t.docs.pricingPlans.sso, free: false, pro: false, enterprise: true },
-    { key: 'sla', label: t.docs.pricingPlans.sla, free: false, pro: false, enterprise: true },
-  ];
-
   const curlExample = `curl -X POST https://your-domain.com/api/chat/bot_123 \\
   -H "Authorization: Bearer sk_your_api_key" \\
   -H "Content-Type: application/json" \\
@@ -99,12 +83,6 @@ export default function DocsPage() {
   data-bot-id="your-bot-id"
   async>
 </script>`;
-
-  const renderPricingCell = (value: string | boolean) => {
-    if (value === true) return <Check className="h-4 w-4 text-emerald-500 mx-auto" />;
-    if (value === false) return <X className="h-4 w-4 text-muted-foreground/40 mx-auto" />;
-    return <span className="text-sm">{value}</span>;
-  };
 
   return (
     <div className="pt-24 pb-16">
@@ -372,52 +350,6 @@ export default function DocsPage() {
                       </div>
                     ))}
                   </div>
-                </div>
-              </div>
-            </DocsSection>
-
-            {/* Pricing Plans */}
-            <DocsSection
-              id="pricing-plans"
-              title={t.docs.pricingPlans.title}
-              description={t.docs.pricingPlans.description}
-            >
-              <div className="space-y-6">
-                <div className="rounded-xl border overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="text-left px-5 py-3 font-semibold">{t.docs.pricingPlans.feature}</th>
-                        <th className="text-center px-5 py-3 font-semibold">{t.docs.pricingPlans.free}</th>
-                        <th className="text-center px-5 py-3 font-semibold">
-                          <span className="inline-flex items-center gap-1">
-                            {t.docs.pricingPlans.pro}
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Popular</Badge>
-                          </span>
-                        </th>
-                        <th className="text-center px-5 py-3 font-semibold">{t.docs.pricingPlans.enterprise}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {pricingFeatures.map((row) => (
-                        <tr key={row.key} className="hover:bg-muted/30 transition-colors">
-                          <td className="px-5 py-3 font-medium">{row.label}</td>
-                          <td className="px-5 py-3 text-center">{renderPricingCell(row.free)}</td>
-                          <td className="px-5 py-3 text-center">{renderPricingCell(row.pro)}</td>
-                          <td className="px-5 py-3 text-center">{renderPricingCell(row.enterprise)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="text-center">
-                  <Button
-                    className="bg-gradient-to-r from-blue-600 to-violet-600 text-white hover:from-blue-700 hover:to-violet-700"
-                    asChild
-                  >
-                    <Link href="/#pricing">{t.docs.pricingPlans.viewPricing}</Link>
-                  </Button>
                 </div>
               </div>
             </DocsSection>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useI18n } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { PROVIDER_PRESETS, getPresetById } from '@/lib/ai/providers';
 
 const THEME_COLORS = [
   '#6366f1',
@@ -33,13 +34,7 @@ const THEME_COLORS = [
   '#14b8a6',
 ];
 
-const MODELS = [
-  { value: 'gpt-4o', label: 'GPT-4o' },
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
-  { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-  { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
-];
+// Models will be loaded from user's AI settings
 
 interface CreateBotDialogProps {
   open: boolean;
@@ -67,6 +62,24 @@ export function CreateBotDialog({
   const [systemPrompt, setSystemPrompt] = useState('');
   const [themeColor, setThemeColor] = useState('#6366f1');
   const [model, setModel] = useState('gpt-4o');
+  const [models, setModels] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    fetch('/api/user/ai-settings')
+      .then((res) => res.json())
+      .then((data) => {
+        const preset = getPresetById(data.ai_provider);
+        const presetModels = preset?.models ?? PROVIDER_PRESETS[0].models;
+        setModels(presetModels);
+        if (presetModels.length > 0 && !presetModels.some((m) => m.value === model)) {
+          setModel(presetModels[0].value);
+        }
+      })
+      .catch(() => {
+        setModels(PROVIDER_PRESETS[0].models);
+      });
+  }, [open]);
 
   const handleCreate = async () => {
     if (!name.trim()) return;
@@ -178,7 +191,7 @@ export function CreateBotDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {MODELS.map((m) => (
+                {models.map((m) => (
                   <SelectItem key={m.value} value={m.value}>
                     {m.label}
                   </SelectItem>

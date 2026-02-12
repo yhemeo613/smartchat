@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, easeOut } from 'framer-motion';
 import { ArrowRight, Play, Bot, User, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ const fadeInUp = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, delay: i * 0.15, ease: 'easeOut' },
+    transition: { duration: 0.6, delay: i * 0.15, ease: easeOut },
   }),
 };
 
@@ -34,7 +34,7 @@ function ChatMockup() {
     <motion.div
       initial={{ opacity: 0, y: 40, rotateX: 5 }}
       animate={{ opacity: 1, y: 0, rotateX: 0 }}
-      transition={{ duration: 0.8, delay: 0.6, ease: 'easeOut' }}
+      transition={{ duration: 0.8, delay: 0.6, ease: easeOut }}
       className="relative w-full max-w-sm mx-auto"
     >
       {/* Glow effect */}

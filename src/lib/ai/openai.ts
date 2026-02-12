@@ -1,10 +1,5 @@
 import OpenAI from 'openai';
 
-export const openai = new OpenAI({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  baseURL: process.env.ANTHROPIC_BASE_URL,
-});
-
 export const EMBEDDING_MODELS = [
   { value: 'local-bge-small-zh-v1.5', label: 'Local: BGE-small-zh (Free, 中文优化)', group: 'Local (Free)' },
   { value: 'local-all-MiniLM-L6-v2', label: 'Local: all-MiniLM-L6-v2 (Free)', group: 'Local (Free)' },
@@ -40,13 +35,26 @@ async function generateLocalEmbedding(text: string, model: EmbeddingModel): Prom
   return output.tolist()[0];
 }
 
-export async function generateEmbedding(text: string, model: EmbeddingModel = 'local-all-MiniLM-L6-v2'): Promise<number[]> {
+export async function generateEmbedding(
+  text: string,
+  model: EmbeddingModel = 'local-all-MiniLM-L6-v2',
+  openaiConfig?: { apiKey: string; baseUrl?: string }
+): Promise<number[]> {
   if (model.startsWith('local-')) {
     return generateLocalEmbedding(text, model);
   }
 
+  if (!openaiConfig?.apiKey) {
+    throw new Error('OpenAI API Key is required for non-local embedding models.');
+  }
+
+  const client = new OpenAI({
+    apiKey: openaiConfig.apiKey,
+    baseURL: openaiConfig.baseUrl || undefined,
+  });
+
   try {
-    const response = await openai.embeddings.create({
+    const response = await client.embeddings.create({
       model,
       input: text,
     });
@@ -62,7 +70,7 @@ export async function splitTextIntoChunks(
   text: string,
   maxChunkSize = 500,
   overlap = 50
-): string[] {
+): Promise<string[]> {
   const sentences = text.split(/(?<=[.!?。！？\n])\s*/);
   const chunks: string[] = [];
   let currentChunk = '';

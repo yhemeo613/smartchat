@@ -7,7 +7,7 @@ import type { Locale } from '@/types';
 interface I18nContextType {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: Messages;
+  t: typeof messages['en'] | typeof messages['zh'];
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);

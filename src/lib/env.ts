@@ -18,10 +18,3 @@ export function getSupabaseServiceRoleKey(): string {
   return requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 }
 
-export function getOpenAIApiKey(): string {
-  return requireEnv('OPENAI_API_KEY');
-}
-
-export function getAnthropicApiKey(): string {
-  return requireEnv('ANTHROPIC_API_KEY');
-}

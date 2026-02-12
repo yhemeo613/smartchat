@@ -1,9 +1,16 @@
-import { openai } from './openai';
-import { anthropic } from './anthropic';
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+import { getPresetById } from './providers';
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
+}
+
+export interface AIConfig {
+  provider: string;
+  apiKey: string;
+  baseUrl?: string;
 }
 
 interface StreamChatOptions {
@@ -11,18 +18,27 @@ interface StreamChatOptions {
   temperature: number;
   max_tokens: number;
   messages: ChatMessage[];
+  aiConfig: AIConfig;
 }
 
 interface ChatChunk {
   text: string;
 }
 
-function isAnthropicModel(model: string): boolean {
-  return model.startsWith('claude-');
+function shouldUseAnthropicSdk(config: AIConfig): boolean {
+  const preset = getPresetById(config.provider);
+  return preset?.useAnthropicSdk === true;
 }
 
 async function* streamOpenAI(options: StreamChatOptions): AsyncIterable<ChatChunk> {
-  const stream = await openai.chat.completions.create({
+  if (!options.aiConfig.apiKey) {
+    throw new Error('API Key is not configured. Please set it in Settings.');
+  }
+  const client = new OpenAI({
+    apiKey: options.aiConfig.apiKey,
+    baseURL: options.aiConfig.baseUrl || undefined,
+  });
+  const stream = await client.chat.completions.create({
     model: options.model,
     temperature: options.temperature,
     max_tokens: options.max_tokens,
@@ -39,14 +55,20 @@ async function* streamOpenAI(options: StreamChatOptions): AsyncIterable<ChatChun
 }
 
 async function* streamAnthropic(options: StreamChatOptions): AsyncIterable<ChatChunk> {
-  // Extract system message — Anthropic requires it as a separate parameter
+  if (!options.aiConfig.apiKey) {
+    throw new Error('API Key is not configured. Please set it in Settings.');
+  }
+  const client = new Anthropic({
+    apiKey: options.aiConfig.apiKey,
+    baseURL: options.aiConfig.baseUrl || undefined,
+  });
   const systemMessage = options.messages.find((m) => m.role === 'system');
   const nonSystemMessages = options.messages
     .filter((m) => m.role !== 'system')
     .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
   try {
-    const stream = anthropic.messages.stream({
+    const stream = client.messages.stream({
       model: options.model,
       max_tokens: options.max_tokens,
       temperature: options.temperature,
@@ -67,7 +89,7 @@ async function* streamAnthropic(options: StreamChatOptions): AsyncIterable<ChatC
 }
 
 export async function* streamChat(options: StreamChatOptions): AsyncIterable<ChatChunk> {
-  if (isAnthropicModel(options.model)) {
+  if (shouldUseAnthropicSdk(options.aiConfig)) {
     yield* streamAnthropic(options);
   } else {
     yield* streamOpenAI(options);

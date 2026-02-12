@@ -132,9 +132,20 @@ export async function POST(req: NextRequest) {
       const chunkRecords = [];
       let totalTokens = 0;
 
+      // Fetch user's AI config for non-local embedding models
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('openai_api_key, openai_base_url')
+        .eq('id', user.id)
+        .single();
+
+      const openaiConfig = profile?.openai_api_key
+        ? { apiKey: profile.openai_api_key, baseUrl: profile.openai_base_url || undefined }
+        : undefined;
+
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
-        const embedding = await generateEmbedding(chunk, embeddingModel);
+        const embedding = await generateEmbedding(chunk, embeddingModel, openaiConfig);
         totalTokens += Math.ceil(chunk.length / 4);
 
         chunkRecords.push({

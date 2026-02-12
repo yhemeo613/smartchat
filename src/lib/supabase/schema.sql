@@ -9,7 +9,6 @@ create extension if not exists "vector" with schema "extensions";
 -- ============================================================
 -- Custom Types
 -- ============================================================
-create type public.plan_type as enum ('free', 'pro', 'enterprise');
 create type public.document_status as enum ('processing', 'ready', 'error');
 create type public.message_role as enum ('user', 'assistant', 'system');
 
@@ -23,9 +22,10 @@ create table public.profiles (
   email       text unique not null,
   full_name   text,
   avatar_url  text,
-  plan          public.plan_type not null default 'free',
-  message_quota integer not null default 50,
-  message_used  integer not null default 0,
+  ai_provider       text not null default 'openai',
+  ai_api_key        text,
+  ai_base_url       text,
+  default_model     text not null default 'gpt-4o-mini',
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );

@@ -13,8 +13,8 @@ export function Footer() {
       title: t.footer.product,
       links: [
         { label: t.nav.features, href: '/#features' },
-        { label: t.nav.pricing, href: '/#pricing' },
         { label: t.nav.docs, href: '/docs' },
+        { label: t.nav.donate, href: '/donate' },
       ],
     },
     {

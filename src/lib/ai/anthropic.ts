@@ -1,6 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
-
-export const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  baseURL: process.env.ANTHROPIC_BASE_URL || undefined,
-});
+// Anthropic client is now created dynamically in provider.ts
+// This file is kept for backward compatibility of imports if needed.
+// Direct usage should go through streamChat() in provider.ts with AIConfig.
+export {};
