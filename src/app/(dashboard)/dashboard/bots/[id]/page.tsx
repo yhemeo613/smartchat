@@ -231,7 +231,8 @@ export default function BotDetailPage() {
 
       try {
         // Upload file to Supabase Storage first
-        const filePath = `${botId}/${Date.now()}-${file.name}`;
+        const safeFileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${file.name.split('.').pop()}`;
+        const filePath = `${botId}/${safeFileName}`;
         const { error: uploadError } = await supabase.storage
           .from('documents')
           .upload(filePath, file);
